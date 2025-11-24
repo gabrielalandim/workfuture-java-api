@@ -1,25 +1,23 @@
-# --- Estágio 1: Construção (Build) ---
+# --- Estágio 1: Build (Usando Maven já instalado) ---
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 
-# 1. Copia APENAS o pom.xml primeiro (Isso ajuda a identificar se ele existe)
-COPY pom.xml .
+# AQUI ESTÁ A MUDANÇA MÁGICA:
+# Em vez de copiar arquivo por arquivo, copiamos TUDO (.) para dentro do container (.)
+COPY . .
 
-# 2. Copia a pasta de código fonte
-COPY src ./src
-
-# 3. Roda o Maven para gerar o .jar (Sem testes para ser rápido)
+# Roda o build (gera o .jar)
 RUN mvn -DskipTests clean package
 
-# --- Estágio 2: Execução (Run) ---
+# --- Estágio 2: Executar ---
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Copia os arquivos gerados do estágio anterior para o local final
+# Copia os arquivos gerados para a pasta de deploy
 COPY --from=build /app/target/quarkus-app/lib/ /deployment/lib/
 COPY --from=build /app/target/quarkus-app/*.jar /deployment/
 COPY --from=build /app/target/quarkus-app/app/ /deployment/app/
 COPY --from=build /app/target/quarkus-app/quarkus/ /deployment/quarkus/
 
-# Comando para iniciar o servidor
+# Inicia a API
 CMD ["java", "-jar", "/deployment/quarkus-run.jar"]
